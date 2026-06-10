@@ -1,1 +1,139 @@
 # global-market-dashboard
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>全球市場監控 Dashboard</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0d1117;
+    color: #e6edf3;
+}
+
+h2 {
+    margin-top: 20px;
+}
+
+.container {
+    padding: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.card {
+    background: #161b22;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.up { color: #00ff88; }
+.down { color: #ff4d4d; }
+
+.small {
+    font-size: 12px;
+    opacity: 0.7;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🌍 全球市場監控 Dashboard</h1>
+<div class="small">每 5 秒自動更新</div>
+
+<h2>📊 日盤</h2>
+<div class="grid">
+    <div class="card" id="tw"></div>
+    <div class="card" id="jp"></div>
+    <div class="card" id="kr"></div>
+</div>
+
+<h2>🌙 夜盤</h2>
+<div class="grid">
+    <div class="card" id="us"></div>
+    <div class="card" id="nasdaq"></div>
+    <div class="card" id="spx"></div>
+</div>
+
+<h2>⚠️ 風險指標</h2>
+<div class="grid">
+    <div class="card" id="vix"></div>
+    <div class="card" id="dxy"></div>
+</div>
+
+<h2>💱 匯率</h2>
+<div class="grid">
+    <div class="card" id="twd"></div>
+    <div class="card" id="jpy"></div>
+</div>
+
+</div>
+
+<script>
+
+async function fetchCSV(url) {
+    const res = await fetch(url);
+    const text = await res.text();
+    const rows = text.trim().split("\n");
+    const cols = rows[1].split(",");
+    return {
+        name: cols[0],
+        price: cols[1],
+        change: cols[4],
+        percent: cols[5]
+    };
+}
+
+function render(id, data, label) {
+    const el = document.getElementById(id);
+    const up = parseFloat(data.change) >= 0;
+
+    el.innerHTML = `
+        <h3>${label}</h3>
+        <div>價格：${data.price}</div>
+        <div class="${up ? 'up' : 'down'}">
+            漲跌：${data.change} (${data.percent}%)
+        </div>
+    `;
+}
+
+async function update() {
+    try {
+        // 日盤
+        render("tw", await fetchCSV("https://stooq.com/q/l/?s=twse&i=5"), "台股加權");
+        render("jp", await fetchCSV("https://stooq.com/q/l/?s=nikkei&i=5"), "日經225");
+        render("kr", await fetchCSV("https://stooq.com/q/l/?s=kospi&i=5"), "KOSPI");
+
+        // 夜盤
+        render("us", await fetchCSV("https://stooq.com/q/l/?s=spx&i=5"), "S&P500");
+        render("nasdaq", await fetchCSV("https://stooq.com/q/l/?s=ndq&i=5"), "NASDAQ");
+        render("spx", await fetchCSV("https://stooq.com/q/l/?s=dji&i=5"), "道瓊");
+
+        // 風險
+        render("vix", await fetchCSV("https://stooq.com/q/l/?s=vix&i=5"), "VIX 恐慌指數");
+        render("dxy", await fetchCSV("https://stooq.com/q/l/?s=dx-y.nyb&i=5"), "美元指數");
+
+        // 匯率
+        render("twd", await fetchCSV("https://stooq.com/q/l/?s=usdtwd&i=5"), "USD/TWD");
+        render("jpy", await fetchCSV("https://stooq.com/q/l/?s=usdjpy&i=5"), "USD/JPY");
+
+    } catch (e) {
+        console.log("更新失敗", e);
+    }
+}
+
+update();
+setInterval(update, 5000);
+
+</script>
+</body>
+</html>
